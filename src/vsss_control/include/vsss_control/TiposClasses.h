@@ -11,7 +11,8 @@
 #ifndef TIPOSCLASSES_H_
 #define TIPOSCLASSES_H_
 
-
+// #include <gtkmm.h>
+// #include <glib.h>
 #include <iostream>
 #include <fstream>
 #include <map>
@@ -19,13 +20,24 @@
 #include <cstring>
 #include <cmath>
 #include <algorithm>
+#include <limits.h>
+//#include <gdk/gdkkeysyms.h>
 using namespace std;
+
+//#include <iostream>
+//#include <fstream>
+//#include <map>
+//#include <string>
+//#include <cstring>
+//#include <cmath>
+//#include <algorithm>
+//using namespace std;
 
 typedef unsigned char guint8;
 
 //#define SEM_PREVISAO
 
-#define SERIAL	//usado para retirar as rotina da serial
+//#define SERIAL	//usado para retirar as rotina da serial- SUBSTITUIDO por um dentro da serial.h
 
 const int TAM_IMAGEM_640x480x3 = 640 * 480 * 3;
 const int TAM_IMAGEM_640x480x1 = 640 * 480;
@@ -47,6 +59,7 @@ const int TAM_IMAGEM_640x480x1 = 640 * 480;
 #define POS_X_GOLEIRO (TAM_X_DO_GOL + TAM_ROBO/2 + 2)	// 2 cm a mais para o robo ter espaco para andar
 #define TAM_X_AREA 15
 #define TAM_ROBO 8 //tamanho do lado do robo em cm
+#define DIST_GIRO TAM_ROBO*2
 #define TAM_BOLA 4 //tamanho do raio da bola
 //numero de robos em cada time
 #define NUM_ROBOS_TIME	3
@@ -62,6 +75,7 @@ const int TAM_IMAGEM_640x480x1 = 640 * 480;
 
 //numero de quadros de atraso entre a visao e o comando ser recebido pelos robos
 #define N_IMAGENS_ATRASO 5
+#define N_IMAGENS_INERCIA 3
 
 /** custo com alta penalidade indicando que nao existe
  * usado também -NAO_EXISTE, para agilizar comparacao <0, pode ser mais rapido que !=NAO_EXISTE (especialmente em reais (float)
@@ -71,9 +85,9 @@ const int TAM_IMAGEM_640x480x1 = 640 * 480;
 #define VELOCIDADE_MAXIMA 200	// maxima velocidade que se considera que um robo pode se deslocar
 #define VEL_MAXIMA_ROBO_CM 150.0	// velocidade maxima de robo em cm
 #define VEL_MAXIMA_ROBO_UNID 7		// velocidade que se pode atribuir ao robo
-#define FATOR_VEL_ROBO_UNID_POR_CM VEL_MAXIMA_ROBO_UNID/VEL_MAXIMA_ROBO_CM // fator de conversao entre a velocidade em cm para unidades
+#define FATOR_VEL_ROBO_UNID_POR_CM (VEL_MAXIMA_ROBO_UNID/VEL_MAXIMA_ROBO_CM) // fator de conversao entre a velocidade em cm para unidades
 #define DIST_ENTRE_RODAS 7
-#define FATOR_ANGULO_DIF_RODAS_UNID_VEL 0.099 // atang2(VEL_MAXIMA_ROBO_CM/7/30, DIST_ENTRE_RODAS) a cada 0.78 graus significa uma diferenca entre rodas de uma unidade de velocidade em 1/30s
+#define FATOR_ANGULO_DIF_RODAS_UNID_VEL 5.83 // atang2(VEL_MAXIMA_ROBO_CM/7/30, DIST_ENTRE_RODAS) a cada 5.83 graus significa uma diferenca entre rodas de uma unidade de velocidade em 1/30s
 #if NUM_ROBOS_TIME==3
 #define MAX_CONT_COMB 6
 #elif NUM_ROBOS_TIME==4

@@ -7,11 +7,12 @@
  * Se qualquer publicação for gerada pela utilização de software utilizando parcial ou integralmente ESTE software, esta publicação deve conter os devidos créditos para o "Grupo de Integração de Sistemas e Dispositivos Inteligentes (GISDI) do Departamento de Computação da Faculdade de Ciências da Universidade Estadual Paulista (UNESP) - Campos de Bauru - SP - Brasil"
  */
 
-
 #include "TiposClasses.h"
 #include "Auxiliares.h"
 #include "Controle.h"
 //#include "Serial.h"
+
+//#define SEM_PREVISAO
 
 extern int maxPixelsPorSegundo; // velocidade maxima que um robo pode alcancar
 extern Estado estado[NUM_ROBOS_TIME * 2 + 1], estadoAnt[NUM_ROBOS_TIME * 2 + 1], estadoPrev[NUM_ROBOS_TIME * 2 + 1];
@@ -23,7 +24,6 @@ extern bool emPenalidade;
 extern bool emPosiciona;
 extern bool emInicio;
 
-
 extern Objetivo objetivoRobo[NUM_ROBOS_TIME];
 
 enum EstadoAtacante {
@@ -31,16 +31,19 @@ enum EstadoAtacante {
 } estadoAtacante;
 int trocarVolanteAtacante = 0;
 
-CmdEnviado cmdEnviado[10][NUM_ROBOS_TIME]; //comando enviado aos robos
-CmdEnviado cmdEnviado2[10][NUM_ROBOS_TIME]; //comando enviado aos robos
+#define TAM_CMD_ENV 20
+CmdEnviado cmdEnviado[TAM_CMD_ENV][NUM_ROBOS_TIME]; //comando enviado aos robos
+
 extern int indGoleiro;
 extern int indVolante;
 extern int indAtacante;
 
+bool voltando = false;
+
 void IniciaEstrategia(void) {
 	int i, j;
 	for (i = 0; i < 3; i++) {
-		for (j = 0; j < 10; j++) {
+		for (j = 0; j < TAM_CMD_ENV; j++) {
 			cmdEnviado[j][i].dir = 0;
 			cmdEnviado[j][i].esq = 0;
 		}
@@ -55,133 +58,107 @@ void SAI(char *s) {
 }
 
 void calculaPrevisao(void) {
-#ifdef SEM_PREVISAO
+
 	for (int i = 0; i < 7; i++) {
 		estadoPrev[i] = estado[i];
 	}
-#else
-	for (int i = 0; i < NUM_ROBOS_TIME; i++) {
-		float x, y, dx, dy, ang, v_cm, v_unid, ve, vd, de, dd, aux,
-		difVelRodas, me, md;
-		ang = estado[i].angulo;
-		x = estado[i].x;
-		y = estado[i].y;
-		dx = estado[i].dx;
-		dy = estado[i].dy;
-		v_cm = sqrt(dx * dx + dy * dy); //Calcula a velocidade do Robo em cm
-		//Calcula as velocidade dos motores em unidades
-		v_unid = v_cm * FATOR_VEL_ROBO_UNID_POR_CM;
-		if (v_unid <= VEL_MAXIMA_ROBO_UNID) {
-			if (abs(difAngMenos180a180(atang2(dy, dx), ang)) > 90) {
-				//Robo andando de re';
-				v_unid = -v_unid;//frente (etiquetas) para um lado, deslocamento para o outro
-			}
+#ifndef SEM_PREVISAO
+	for (int j = 0; j < N_IMAGENS_ATRASO; j++) {
+		for (int i = 0; i <= NUM_ROBOS_TIME; i++) {
+			if (i < NUM_ROBOS_TIME) {
+				float x, y, dx, dy, ang, v_cm, v_unid, ve, vd, de, dd, aux, difVelRodas, me, md;
+				ang = estadoPrev[i].angulo;
+				x = estadoPrev[i].x;
+				y = estadoPrev[i].y;
+				dx = estadoPrev[i].dx;
+				dy = estadoPrev[i].dy;
 
-			if (!emJogo)
-			printf("(%3.0f, %3d)", v_unid, cmdEnviado[3][i].vel);
-
-			aux = difAngMenos180a180(ang, estadoAnt[i].angulo);
-			// a cada FATOR_ANGULO_DIF_RODAS_UNID_VEL graus significa uma diferenca entre rodas de uma unidade de velocidade
-			difVelRodas = abs(aux / FATOR_ANGULO_DIF_RODAS_UNID_VEL);
-
-			if (difVelRodas > VEL_MAXIMA_ROBO_UNID * 2)
-			difVelRodas = VEL_MAXIMA_ROBO_UNID * 2;
-			if (aux > 0) { //Robo virando para dir.
-				ve = v_unid - difVelRodas / 2;
-				vd = v_unid + difVelRodas / 2;
-				if (ve < -VEL_MAXIMA_ROBO_UNID) {
-					ve = -VEL_MAXIMA_ROBO_UNID;
-					vd = ve + difVelRodas;
-				} else if (vd > VEL_MAXIMA_ROBO_UNID) {
-					vd = VEL_MAXIMA_ROBO_UNID;
-					ve = vd - difVelRodas;
+				ve = 0;
+				vd = 0;
+//				cout << "!" << N_IMAGENS_INERCIA << endl;
+				for (int k = 0; k < N_IMAGENS_INERCIA; k++) {
+//					cout << (int) cmdEnviado[k + (N_IMAGENS_ATRASO - j)][i].esq << (int) cmdEnviado[k + (N_IMAGENS_ATRASO - j)][i].dir;
+//					cout.flush();
+					ve += cmdEnviado[k + (N_IMAGENS_ATRASO - j)][i].esq;
+					vd += cmdEnviado[k + (N_IMAGENS_ATRASO - j)][i].dir;
 				}
-			} else { //Robo virando para esq
-				ve = v_unid + difVelRodas / 2;
-				vd = v_unid - difVelRodas / 2;
-				if (ve > VEL_MAXIMA_ROBO_UNID) {
-					ve = VEL_MAXIMA_ROBO_UNID;
-					vd = ve - difVelRodas;
-				} else if (vd < -VEL_MAXIMA_ROBO_UNID) {
-					vd = -VEL_MAXIMA_ROBO_UNID;
-					ve = vd + difVelRodas;
+				ve = ve / N_IMAGENS_INERCIA / FATOR_VEL_ROBO_UNID_POR_CM / 30;
+				vd = vd / N_IMAGENS_INERCIA / FATOR_VEL_ROBO_UNID_POR_CM / 30;
+
+				// Calcula o angulo previsto a partir das velocidades previstas
+				//ang += (vd - ve) * FATOR_ANGULO_DIF_RODAS_UNID_VEL;
+				ang += atan2((vd - ve), DIST_ENTRE_RODAS) * 180 / 3.14;
+				while (ang >= 360)
+					ang -= 360;
+				while (ang < 0)
+					ang += 360;
+
+				// Calcula o deslocamento previsto para o robo
+				v_cm = (ve + vd) / 2;
+				dx = v_cm * coss(ang);
+				dy = v_cm * seno(ang);
+				x += dx;
+				y += dy;
+				if (x > TAM_X_CAMPO - TAM_X_DO_GOL) { // Verifica limite do campo
+					x = TAM_X_CAMPO - TAM_X_DO_GOL;
+				} else if (x < TAM_X_DO_GOL) { // verifica limites do nosso gol
+					if (y < TAM_Y_DO_GOL && y > TAM_Y_CAMPO - TAM_Y_DO_GOL) {
+						x = TAM_X_DO_GOL;
+					} else { //esta ao lado do nosso gol
+						if (x < TAM_Y_DO_GOL) { //esta dentro do nosso gol
+							x = estadoPrev[i].x; // para evitar que fique batendo nas laterais, usa as coordenadas atuais observadas na imagem
+							y = estadoPrev[i].y;
+						}
+					}
 				}
-			}
-		} else { //robo muito rapido, possivelmente erro
-			ve = (cmdEnviado[0][i].esq + cmdEnviado[1][i].esq
-					+ cmdEnviado[2][i].esq + cmdEnviado[3][i].esq) / 4;
-			vd = (cmdEnviado[0][i].dir + cmdEnviado[1][i].dir
-					+ cmdEnviado[2][i].dir + cmdEnviado[3][i].dir) / 4;
-		}
-
-		md = (cmdEnviado[0][i].dir + cmdEnviado[1][i].dir
-				+ cmdEnviado[2][i].dir + cmdEnviado[3][i].dir) / 4; //+Cmd[5][i].d+Cmd[6][i].d)/6;//+Cmd[7][i].d+Cmd[8][i].d)/8;
-		me = (cmdEnviado[0][i].esq + cmdEnviado[1][i].esq
-				+ cmdEnviado[2][i].esq + cmdEnviado[3][i].esq) / 4;//+Cmd[5][i].e+Cmd[6][i].e)/6;//+Cmd[7][i].e+Cmd[8][i].e)/8;
-
-		de = ve - me;
-		dd = vd - md;
-
-		// Calcula as velocidades previstas de cada roda
-		if (de) { // Se nao esta' em velocidade constante
-			if (de > 0) { // Velocidade aumentando?
-				ve += 1;// Sim, velocidade prevista deve ser maior que a observada
-			} else {
-				ve -= 1; // Nao, velocidade prevista deve ser menor que a observada
-			}
-		}
-		if (dd) {
-			if (dd > 0) {
-				vd += 1;
-			} else {
-				vd -= 1;
-			}
-		}
-		// Calcula o angulo previsto a partir das velocidades previstas
-		ang += (vd - ve) * FATOR_ANGULO_DIF_RODAS_UNID_VEL;
-		while (ang >= 360)
-		ang -= 360;
-		while (ang < 0) {
-			ang += 360;
-		}
-
-		// Calcula o deslocamento previsto para o robo
-		v_unid = (ve + vd) / 2;//media
-		v_cm = v_unid / FATOR_VEL_ROBO_UNID_POR_CM;
-		dx = v_cm * coss(ang);
-		dy = v_cm * seno(ang);
-		x += dx;
-		y += dy;
-		if (x > TAM_X_CAMPO - TAM_X_DO_GOL) { // Verifica limite do campo
-			x = TAM_X_CAMPO - TAM_X_DO_GOL;
-		} else if (x < TAM_X_DO_GOL) { // verifica limites do nosso gol
-			if (y < TAM_Y_DO_GOL && y > TAM_Y_CAMPO - TAM_Y_DO_GOL) {
-				x = TAM_X_DO_GOL;
-			} else { //esta ao lado do nosso gol
-				if (x < TAM_Y_DO_GOL) { //esta dentro do nosso gol
-					x = estado[i].x;// para evitar que fique batendo nas laterais, usa as coordenadas atuais observadas na imagem
-					y = estado[i].y;
+				if (y > TAM_Y_CAMPO - TAM_ROBO / 2) {
+					y = TAM_Y_CAMPO - TAM_ROBO / 2;
+				} else if (y < TAM_ROBO / 2) {
+					y = TAM_ROBO / 2;
 				}
+
+				//cmdEnviado[0][i].vel = v_unid / 2; //Calcula media
+
+				//Se a distancia entre a posição prevista do robo e da bola é menor que a distância menor entre a bola e o robô, há colisao, neste caso, não atualiza a previsão das coordenadas, só atualiza o angulo
+				estadoPrev[i].angulo = ang;
+				if (sqrt((estadoPrev[IND_BOLA].x - x) * (estadoPrev[IND_BOLA].x - x) + (estadoPrev[IND_BOLA].y - y) * (estadoPrev[IND_BOLA].y - y)) > sqrt(TAM_ROBO * TAM_ROBO + TAM_BOLA + TAM_BOLA) / 2) {
+					estadoPrev[i].x = x;
+					estadoPrev[i].y = y;
+					estadoPrev[i].dx = dx;
+					estadoPrev[i].dy = dy;
+				}
+			} else if (i == NUM_ROBOS_TIME) {
+				float x, y;
+				float dx, dy, ang;
+				//media do angulo
+				dx = estadoPrev[i].dx;
+				dy = estadoPrev[i].dy;
+				ang = atang2(dy, dx);
+
+				x = estadoPrev[i].x + dx;
+				y = estadoPrev[i].y + dy;
+				if (x > TAM_X_CAMPO - TAM_X_DO_GOL - TAM_BOLA / 2) {
+					x = TAM_X_CAMPO - TAM_X_DO_GOL - TAM_BOLA / 2;
+				} else if (x < TAM_X_DO_GOL + TAM_BOLA / 2) {
+					x = TAM_X_DO_GOL + TAM_BOLA / 2;
+				}
+				if (y > TAM_Y_CAMPO - TAM_BOLA / 2) {
+					y = TAM_Y_CAMPO - TAM_BOLA / 2;
+				} else if (y < TAM_BOLA / 2) {
+					y = TAM_BOLA / 2;
+				}
+				estadoPrev[i].angulo = ang;
+				estadoPrev[i].x = x;
+				estadoPrev[i].y = y;
+				estadoPrev[i].dx = dx;
+				estadoPrev[i].dy = dy;
 			}
 		}
-		if (y > TAM_Y_CAMPO - TAM_ROBO / 2) {
-			y = TAM_Y_CAMPO - TAM_ROBO / 2;
-		} else if (y < TAM_ROBO / 2) {
-			y = TAM_ROBO / 2;
-		}
-
-		cmdEnviado[0][i].vel = v_unid / 2; //Calcula media
-
-		estadoPrev[i].angulo = ang;
-		estadoPrev[i].x = x;
-		estadoPrev[i].y = y;
-		estadoPrev[i].dx = dx;
-		estadoPrev[i].dy = dy;
 	}
 
 #endif
-
-	for (int i = NUM_ROBOS_TIME; i < NUM_ROBOS_TIME * 2 + 1; i++) {
+//previsão para a bola e robôs adversários
+	for (int i = NUM_ROBOS_TIME + 1; i < NUM_ROBOS_TIME * 2 + 1; i++) {
 		float x, y;
 		float dx, dy;
 		//media do angulo
@@ -191,7 +168,6 @@ void calculaPrevisao(void) {
 		estadoPrev[i].dx = dx;
 		estadoPrev[i].dy = dy;
 
-		//while
 		x = estado[i].x + dx * N_IMAGENS_ATRASO;
 		y = estado[i].y + dy * N_IMAGENS_ATRASO;
 		if (x > TAM_X_CAMPO - TAM_X_DO_GOL) {
@@ -281,6 +257,7 @@ void calculaPrevisao(void) {
 	 }
 
 	 //  BolaParada=abs(estadoPrev[3].Dx)<=1 && abs(estadoPrev[3].Dy)<=1;*/
+
 }
 
 //Retorna:	Numero de quadros ate o choque
@@ -391,13 +368,13 @@ void EstrGoleiro(void) {
 	dxBola = estadoPrev[IND_BOLA].dx;
 	dyBola = estadoPrev[IND_BOLA].dy;
 
-	//Calcula o deslocamento de limite dependendo do angulo
+//Calcula o deslocamento de limite dependendo do angulo
 	float d = 0; //abs((((int) estadoPrev[indGoleiro].angulo + 45) % 90) - 45) * 2 / 45; // no angulos 45, 135, 225 e 315 considera o robo maior 2 cm
-	// a linha acima serve para dar mais espaco ao robo quando girando
+// a linha acima serve para dar mais espaco ao robo quando girando
 
 	if (tiroMeta) {
-		xObjetivo = xBola; // valor anterior verificar CENTRO_X_GOL;
-		yObjetivo = yBola; //  valor anterior verificar CENTRO_Y_GOL;
+		xObjetivo = CENTRO_X_GOL;
+		yObjetivo = CENTRO_Y_GOL;
 		if (xGoleiro > TAM_X_DO_GOL * 3)
 			tiroMeta = false;
 	} else {
@@ -453,26 +430,20 @@ void EstrGoleiro(void) {
 			yObjetivo = TAM_Y_CAMPO / 2;
 		}
 	}
-	if (xGoleiro < POS_X_GOLEIRO + d && (yGoleiro
-			< (TAM_Y_CAMPO - TAM_Y_DO_GOL) / 2 || yGoleiro > TAM_Y_CAMPO
-			- (TAM_Y_CAMPO - TAM_Y_DO_GOL) / 2)) {// Fora do gol
-		if (abs(dxGoleiro) <= 1 && abs(dyGoleiro) <= 1) { // Esta parado
-			xObjetivo = POS_X_GOLEIRO + d; // Afasta robo da parede
-		}
-	}
+
+//	Se o goleiro está erroscado na parede ao redor do gol, movimentoa o robô.
+//	if (xGoleiro < POS_X_GOLEIRO + d && (yGoleiro
+//			< (TAM_Y_CAMPO - TAM_Y_DO_GOL) / 2 || yGoleiro > TAM_Y_CAMPO
+//			- (TAM_Y_CAMPO - TAM_Y_DO_GOL) / 2)) {// Fora do gol
+//		if (abs(dxGoleiro) <= 1 && abs(dyGoleiro) <= 1) { // Esta parado
+//			xObjetivo = POS_X_GOLEIRO + d; // Afasta robo da parede
+//		}
+//	}
+
 	objetivoRobo[indGoleiro].x = xObjetivo;
 	objetivoRobo[indGoleiro].y = yObjetivo;
 	objetivoRobo[indGoleiro].angulo = 90; // graus
 	objetivoRobo[indGoleiro].vel = 0;
-//	objetivoRobo[indGoleiro].x = xBola;
-//	objetivoRobo[indGoleiro].y = yBola;
-//	objetivoRobo[indGoleiro].angulo = 90; // graus
-//	objetivoRobo[indGoleiro].vel = 0;
-	/*
-	 objetivoRobo[indGoleiro].x = 20;
-	 objetivoRobo[indGoleiro].y = 25;
-	 objetivoRobo[indGoleiro].angulo = 90; // graus
-	 objetivoRobo[indGoleiro].vel = 0;*/
 }
 
 //==================== V O L A N T E =========================
@@ -491,24 +462,22 @@ void estrVolante(int indVolante) {
 	xAtacante = estadoPrev[indAtacante].x;
 	yAtacante = estadoPrev[indAtacante].y;
 
-	//Calcula o deslocamento de limite dependendo do angulo
+//Calcula o deslocamento de limite dependendo do angulo
 	float d = 0;
-	//	abs((((int) estadoPrev[indVolante].angulo + 45) % 90) - 45) * 4 / 45; // nos angulos 45, 135, 225 e 315 considera o robo maior 2 cm
-	// a linha acima serve para dar mais espaco ao robo quando girando
+//	abs((((int) estadoPrev[indVolante].angulo + 45) % 90) - 45) * 4 / 45; // nos angulos 45, 135, 225 e 315 considera o robo maior 2 cm
+// a linha acima serve para dar mais espaco ao robo quando girando
 
 	velObjetivo = 0;
 	angObjetivo = 90;
-	xObjetivo = xRobo; // Por padrao mantem o robo na linha atual
-	yObjetivo = yBola; // Por padrao fica alinhado com a bola
+	xObjetivo = xRobo;	// Por padrao mantem o robo na linha atual
+	yObjetivo = yBola;	// Por padrao fica alinhado com a bola
 	if (xRobo - xBola > TAM_ROBO / 2) { //Se bola esta atras do robo (passou a defesa)
 		if (abs(yBola - yAtacante) <= TAM_ROBO) //robo atacante e bola alinhados em y,
 			xObjetivo = xRobo; //o atacante está protegendo, fica parado em X
 		else
 			xObjetivo = xBola + TAM_ROBO * 2;
-		velObjetivo = 0;
-		if (dxBola <= 0) { //Se bola parada ou indo para o gol
-			if (xBola - xAtacante < TAM_ROBO && abs(yBola - yAtacante)
-					< TAM_ROBO / 2) { // se tem atacante posicionado para empurrar a bola, entao retira volante do caminho
+		if (dxBola <= 0) { //Se bola parada ou indo para o nosso gol
+			if (xBola - xAtacante < TAM_ROBO && abs(yBola - yAtacante) < TAM_ROBO / 2) { // se tem atacante posicionado para empurrar a bola, entao retira volante do caminho
 				if (yRobo < yBola) {
 					yObjetivo = yBola - TAM_ROBO; //Coloca o robo para a direita da bola
 					if (yObjetivo < TAM_ROBO / 2 + d) { // se por baixo nao cabe (impedido pela lateral), vai pelo outro lado
@@ -522,7 +491,7 @@ void estrVolante(int indVolante) {
 				}
 			}
 		} else { //Se a bola esta saindo da defesa (indo p/ ataque)
-			if (xObjetivo < TAM_X_DO_GOL + TAM_X_AREA + TAM_ROBO / 2)	// se o robo está na área de defesa
+			if (xObjetivo < TAM_X_DO_GOL + TAM_X_AREA + TAM_ROBO / 2) // se o robo está na área de defesa
 				xObjetivo = TAM_X_DO_GOL + TAM_X_AREA + TAM_ROBO / 2;
 			if (!existeAdversarioProximo(xBola + TAM_ROBO, yBola, TAM_ROBO)) {
 				if (xRobo - xBola > TAM_ROBO * 2 && abs(yRobo - yBola) < TAM_ROBO) { // Se o robo esta na direcao da bola e proximo a ela, retira o robo para deixar a bola passar
@@ -601,15 +570,15 @@ void estrVolante(int indVolante) {
 //				xObjetivo = xRobo; //Robo se mantem na linha sbai2009
 				yObjetivo = yBola; //Acompanha a posicao da bola
 			} /*else { //Se a bola esta indo
-				if (xBola - TAM_ROBO * 3 > xRobo) {
-					xObjetivo = xBola - TAM_ROBO * 3; // Avanca linha de defesa com a bola
-				} else {
-					xObjetivo = xRobo + TAM_ROBO * 3; // #sbai2009
-				}
-				if (xObjetivo < TAM_X_DO_GOL + TAM_X_AREA + TAM_ROBO)
-					xObjetivo = TAM_X_DO_GOL + TAM_X_AREA + TAM_ROBO; // Nunca dentro da area
-			}*/
-			if (xBola > TAM_X_CAMPO / 2 ) { //Se a bola passou do meio de campo
+			 if (xBola - TAM_ROBO * 3 > xRobo) {
+			 xObjetivo = xBola - TAM_ROBO * 3; // Avanca linha de defesa com a bola
+			 } else {
+			 xObjetivo = xRobo + TAM_ROBO * 3; // #sbai2009
+			 }
+			 if (xObjetivo < TAM_X_DO_GOL + TAM_X_AREA + TAM_ROBO)
+			 xObjetivo = TAM_X_DO_GOL + TAM_X_AREA + TAM_ROBO; // Nunca dentro da area
+			 }*/
+			if (xBola > TAM_X_CAMPO / 2) { //Se a bola passou do meio de campo
 				if (CENTRO_X_GOL - xBola != 0) {
 					yObjetivo = CENTRO_Y_GOL - (CENTRO_Y_GOL - yBola) * (CENTRO_X_GOL - xObjetivo) / (CENTRO_X_GOL - xBola); //Posiciona robo alinhado para chutar
 					if (yObjetivo < TAM_ROBO / 2 + d)
@@ -650,35 +619,35 @@ void estrVolante(int indVolante) {
 		xObjetivo = TAM_X_CAMPO * 0.8;
 		yObjetivo = TAM_Y_CAMPO / 2;
 	}
-/*
+	/*
 
-	float xGoleiro = estadoPrev[indGoleiro].x;
-	float yGoleiro = estadoPrev[indGoleiro].y;
-	dx = xRobo - xGoleiro;
-	dx *= dx;
-	dy = yRobo - yGoleiro;
-	dy *= dy;
+	 float xGoleiro = estadoPrev[indGoleiro].x;
+	 float yGoleiro = estadoPrev[indGoleiro].y;
+	 dx = xRobo - xGoleiro;
+	 dx *= dx;
+	 dy = yRobo - yGoleiro;
+	 dy *= dy;
 
-	if (dx + dy < quadDist) { //Se robos muito proximos
-		if (yGoleiro > yRobo) { //Repele em Y
-			yObjetivo = yGoleiro - TAM_ROBO * 2;
-		} else {
-			yObjetivo = yGoleiro + TAM_ROBO * 2;
-		}
-		if (xGoleiro > xRobo) { //Repele em X
-			xObjetivo = xGoleiro - TAM_ROBO * 2;
-		} else {
-			xObjetivo = xGoleiro + TAM_ROBO * 2;
-		}
-	}
-*/
+	 if (dx + dy < quadDist) { //Se robos muito proximos
+	 if (yGoleiro > yRobo) { //Repele em Y
+	 yObjetivo = yGoleiro - TAM_ROBO * 2;
+	 } else {
+	 yObjetivo = yGoleiro + TAM_ROBO * 2;
+	 }
+	 if (xGoleiro > xRobo) { //Repele em X
+	 xObjetivo = xGoleiro - TAM_ROBO * 2;
+	 } else {
+	 xObjetivo = xGoleiro + TAM_ROBO * 2;
+	 }
+	 }
+	 */
 
 	if (xObjetivo < TAM_X_DO_GOL + TAM_X_AREA + TAM_ROBO / 2)	// se o robo está na área de defesa
 		xObjetivo = TAM_X_DO_GOL + TAM_X_AREA + TAM_ROBO / 2;
 //	if (xObjetivo>TAM_X_CAMPO+15+TAM_ROBO/2)
 //		xObjetivo=TAM_X_CAMPO+15+TAM_ROBO/2;
 
-	objetivoRobo[indVolante].x = TAM_X_CAMPO/2;//xObjetivo;xxxx
+	objetivoRobo[indVolante].x = xObjetivo;
 	objetivoRobo[indVolante].y = yObjetivo;
 	objetivoRobo[indVolante].angulo = angObjetivo;
 	objetivoRobo[indVolante].vel = velObjetivo;
@@ -690,6 +659,7 @@ void estrAtacante(void) {
 	float xObjetivo, yObjetivo, xRobo, yRobo, dxRobo, dyRobo, xBola, yBola, dxBola, dyBola, velObjetivo, angObjetivo;
 	float dxBG, dyBG, dxBO, dyBO, m;
 	float yAlinhamentoRoboBolaGol;
+	float tempo;
 
 	xBola = estadoPrev[IND_BOLA].x;
 	yBola = estadoPrev[IND_BOLA].y;
@@ -704,9 +674,9 @@ void estrAtacante(void) {
 	dxBG = xBola - CENTRO_X_GOL; //Calcula objetivo atras bola, alinhado direcao Bola-Gol
 	dyBG = yBola - CENTRO_Y_GOL;
 
-	//Calcula o deslocamento de limite dependendo do angulo
+//Calcula o deslocamento de limite dependendo do angulo
 	float d = abs((((int) estadoPrev[indVolante].angulo + 45) % 90) - 45) * 2 / 45; // nos angulos 45, 135, 225 e 315 considera o robo maior 2 cm
-	// a linha acima serve para dar mais espaco ao robo quando girando
+// a linha acima serve para dar mais espaco ao robo quando girando
 
 	if (xBola - xRobo > 0) { //Com o alinhamento robo-bola, calcula Y da linha do gol
 		yAlinhamentoRoboBolaGol = yBola - (yBola - yRobo) * (xBola - CENTRO_X_GOL) / (xBola - xRobo);
@@ -718,7 +688,7 @@ void estrAtacante(void) {
 			xBola - xRobo < TAM_ROBO && abs(yBola - yRobo) < TAM_ROBO / 2) { // o robo esta proximo e alinhado com a bola
 		yObjetivo = CENTRO_Y_GOL; //Vai para o gol, a bola deve estar no meio
 		xObjetivo = CENTRO_X_GOL;
-		angObjetivo = 140; //atang2(-dyBG, -dxBG);
+		angObjetivo = atang2(-dyBG, -dxBG);
 		velObjetivo = 7;
 		estadoAtacante = ATACA;
 	} else if (xBola >= xRobo && // a bola esta a frente do robo
@@ -740,19 +710,22 @@ void estrAtacante(void) {
 		}
 	}
 
-	// ----------------------  estadoAtacante==POSICIONA ---------------------------
+// ----------------------  estadoAtacante==POSICIONA ---------------------------
 	if (estadoAtacante == POSICIONA) { //Posicionando o Robo
 		int N, R, dx, dy;
-		static bool voltando = false;
+		//previsao de quanto voltar (verificar)
+		float tempo = (xRobo - xBola) / (dxBola - dxRobo) + (yRobo - yBola) / (dyBola - dyRobo);
+
+//		cout << "!" << tempo << (estadoAtacante == POSICIONA ? "POSICIONA" : "ATACA");
 
 		if (xRobo > xBola) {
 			voltando = true;
-		} else if (xRobo < xBola - TAM_ROBO * 2) {
+		} else if (xRobo < xBola + tempo * dxBola - TAM_ROBO * 2 - DIST_GIRO) {
 			voltando = false;
 		}
 
 		if (voltando) {
-			xObjetivo = xBola - TAM_ROBO * 2.5; //para sair do voltando
+			xObjetivo = xBola + tempo * dxBola - TAM_ROBO * 2.5; //para sair do voltando
 			if (yBola < yRobo) { // escolhe o lado para voltar atras da bola
 				yObjetivo = yBola + TAM_ROBO * 2;
 				angObjetivo = 240;
@@ -781,8 +754,7 @@ void estrAtacante(void) {
 			velObjetivo = 3;
 		}
 
-		calculaChoque(indAtacante, false, &xObjetivo, &yObjetivo, dxBola,
-				dyBola, &N, &R);
+		calculaChoque(indAtacante, false, &xObjetivo, &yObjetivo, dxBola, dyBola, &N, &R);
 
 		if (!voltando) {
 			dx = xBola - xObjetivo; //Com a bola para quando desviar ja posicionar p/ direcao bola-gol
@@ -795,8 +767,8 @@ void estrAtacante(void) {
 			yObjetivo = CENTRO_Y_GOL; //Vai para o gol, a bola deve estar no meio
 		} else {
 			// (CENTRO_Y_GOL - yAlinhamentoRoboBolaGol) é o erro, colocando duas vezes o erro forcará o robo a melhor se alinhar
-			yObjetivo = CENTRO_Y_GOL - (CENTRO_Y_GOL - yAlinhamentoRoboBolaGol)
-					* 2; // Vai para o gol, a bola deve estar no meio
+			yObjetivo = CENTRO_Y_GOL;/* - (CENTRO_Y_GOL - yAlinhamentoRoboBolaGol)
+			 * 2; // Vai para o gol, a bola deve estar no meio*/
 		}
 		xObjetivo = CENTRO_X_GOL;
 		angObjetivo = atang2(-dyBG, -dxBG);
@@ -816,7 +788,7 @@ void estrAtacante(void) {
 		//				angObjetivo = 90;
 	}
 
-	// Serve para afastar o robo quando estiver muito perto das laterais
+// Serve para afastar o robo quando estiver muito perto das laterais
 	if (yObjetivo < TAM_ROBO * 0.75 + d) {
 		yObjetivo = TAM_ROBO * 0.75 + d;
 		xObjetivo = xBola;
@@ -827,9 +799,9 @@ void estrAtacante(void) {
 		angObjetivo = 0;
 	}
 
-	if (xBola < TAM_X_CAMPO / 2 && xBola - xRobo < TAM_ROBO) { //tira bola do ataque
-		xObjetivo = xBola;
-		yObjetivo = yBola;
+	if (xBola < TAM_X_CAMPO / 2 && xBola + tempo * dxBola - xRobo < TAM_ROBO) { //tira bola do ataque
+		xObjetivo = xBola + tempo * dxBola;
+		yObjetivo = yBola + tempo * dyBola;
 		angObjetivo = 0;
 		velObjetivo = 7;
 	} else if (xBola + yBola > TAM_X_CAMPO + TAM_Y_CAMPO - 20) { //nao coloca robo no triangulo inutil
@@ -845,97 +817,94 @@ void estrAtacante(void) {
 	}
 	/*
 
-	float xGoleiro = estadoPrev[indGoleiro].x;
-	float yGoleiro = estadoPrev[indGoleiro].y;
-	float dx = xRobo - xGoleiro;
-	dx *= dx;
-	float dy = yRobo - yGoleiro;
-	dy *= dy;
-	float quadDist = TAM_ROBO * 2;
-	quadDist *= quadDist;
+	 float xGoleiro = estadoPrev[indGoleiro].x;
+	 float yGoleiro = estadoPrev[indGoleiro].y;
+	 float dx = xRobo - xGoleiro;
+	 dx *= dx;
+	 float dy = yRobo - yGoleiro;
+	 dy *= dy;
+	 float quadDist = TAM_ROBO * 2;
+	 quadDist *= quadDist;
 
-	if (dx + dy < quadDist) { //Se robos muito proximos
-		if (yGoleiro > yRobo) { //Repele em Y
-			yObjetivo = yGoleiro - TAM_ROBO * 2;
-		} else {
-			yObjetivo = yGoleiro + TAM_ROBO * 2;
-		}
-		if (xGoleiro > xRobo) { //Repele em X
-			xObjetivo = xGoleiro - TAM_ROBO * 2;
-		} else {
-			xObjetivo = xGoleiro + TAM_ROBO * 2;
-		}
-	}
-*/
+	 if (dx + dy < quadDist) { //Se robos muito proximos
+	 if (yGoleiro > yRobo) { //Repele em Y
+	 yObjetivo = yGoleiro - TAM_ROBO * 2;
+	 } else {
+	 yObjetivo = yGoleiro + TAM_ROBO * 2;
+	 }
+	 if (xGoleiro > xRobo) { //Repele em X
+	 xObjetivo = xGoleiro - TAM_ROBO * 2;
+	 } else {
+	 xObjetivo = xGoleiro + TAM_ROBO * 2;
+	 }
+	 }
+	 */
+
 	if (xObjetivo < TAM_X_DO_GOL + TAM_X_AREA + TAM_ROBO)	// se o robo está na área de defesa
 		xObjetivo = TAM_X_DO_GOL + TAM_X_AREA + TAM_ROBO;
 
-	objetivoRobo[indAtacante].x = xObjetivo;
-	objetivoRobo[indAtacante].y = yObjetivo;
+	objetivoRobo[indAtacante].x = xBola;//xObjetivo;
+	objetivoRobo[indAtacante].y = yBola;//yObjetivo;
 	objetivoRobo[indAtacante].angulo = angObjetivo;
 	objetivoRobo[indAtacante].vel = velObjetivo;
-
 }
 
 void verificaPosiconamentos() {
 	if (emPosiciona) {
-		objetivoRobo[indGoleiro].x = TAM_X_CAMPO- TAM_X_DO_GOL - 20;
-		objetivoRobo[indGoleiro].y = TAM_Y_CAMPO/2;
-		objetivoRobo[indGoleiro].angulo = 0;
-		objetivoRobo[indGoleiro].vel = 0;
-
-		objetivoRobo[indVolante].x = TAM_X_CAMPO/2 ;
-		objetivoRobo[indVolante].y = TAM_Y_CAMPO/2;
-		objetivoRobo[indVolante].angulo = 0;
+		objetivoRobo[indGoleiro].x = TAM_X_DO_GOL + TAM_ROBO / 2;
+		objetivoRobo[indGoleiro].y = TAM_Y_CAMPO / 2;
+		objetivoRobo[indGoleiro].angulo = 90;
+		objetivoRobo[indVolante].x = TAM_X_CAMPO / 2 - 45;
+		objetivoRobo[indVolante].y = TAM_Y_CAMPO / 2 - 15;
+		objetivoRobo[indVolante].angulo = 90;
 		objetivoRobo[indVolante].vel = 0;
 
-		objetivoRobo[indAtacante].x = TAM_X_CAMPO/2 - 20;
-		objetivoRobo[indAtacante].y = TAM_Y_CAMPO/2;
-		objetivoRobo[indAtacante].angulo = 0;
+		objetivoRobo[indAtacante].x = TAM_X_CAMPO / 2 - 25;
+		objetivoRobo[indAtacante].y = TAM_Y_CAMPO / 2 + 5;
+		objetivoRobo[indAtacante].angulo = 350;
 		objetivoRobo[indAtacante].vel = 0;
 
-		if (abs(estado[indGoleiro].x-objetivoRobo[indGoleiro].x) + abs(estado[indGoleiro].y-objetivoRobo[indGoleiro].y) < TAM_ROBO &&
-				abs(estado[indVolante].x-objetivoRobo[indVolante].x) + abs(estado[indVolante].y-objetivoRobo[indVolante].y) < TAM_ROBO &&
-				abs(estado[indAtacante].x-objetivoRobo[indAtacante].x) + abs(estado[indAtacante].y-objetivoRobo[indAtacante].y) < TAM_ROBO) {
+		if (abs(estado[indGoleiro].x - objetivoRobo[indGoleiro].x) + abs(estado[indGoleiro].y - objetivoRobo[indGoleiro].y) < TAM_ROBO
+				&& abs(estado[indVolante].x - objetivoRobo[indVolante].x) + abs(estado[indVolante].y - objetivoRobo[indVolante].y) < TAM_ROBO
+				&& abs(estado[indAtacante].x - objetivoRobo[indAtacante].x) + abs(estado[indAtacante].y - objetivoRobo[indAtacante].y) < TAM_ROBO) {
 			emPosiciona = false;
-			emJogo=false;
+			emJogo = false;
 		}
 	}
 	if (emInicio) {
-		objetivoRobo[indGoleiro].x = TAM_X_DO_GOL+TAM_ROBO/2 ;
-		objetivoRobo[indGoleiro].y = TAM_Y_CAMPO/2;
-		objetivoRobo[indGoleiro].angulo = 0;
+		objetivoRobo[indGoleiro].x = TAM_X_DO_GOL + TAM_ROBO / 2;
+		objetivoRobo[indGoleiro].y = TAM_Y_CAMPO / 2;
+		objetivoRobo[indGoleiro].angulo = 90;
 		objetivoRobo[indGoleiro].vel = 0;
 
-		objetivoRobo[indVolante].x = TAM_X_CAMPO/2 - 45;
-		objetivoRobo[indVolante].y = TAM_Y_CAMPO/2;
-		objetivoRobo[indVolante].angulo = 0;
+		objetivoRobo[indVolante].x = TAM_X_CAMPO / 2 - 45;
+		objetivoRobo[indVolante].y = TAM_Y_CAMPO / 2 - 15;
+		objetivoRobo[indVolante].angulo = 90;
 		objetivoRobo[indVolante].vel = 0;
 
-		objetivoRobo[indAtacante].x = TAM_X_CAMPO/2 - 20;
-		objetivoRobo[indAtacante].y = TAM_Y_CAMPO/2;
-		objetivoRobo[indAtacante].angulo = 0;
+		objetivoRobo[indAtacante].x = TAM_X_CAMPO / 2 - 12;
+		objetivoRobo[indAtacante].y = TAM_Y_CAMPO / 2 + 3;
+		objetivoRobo[indAtacante].angulo = 350;
 		objetivoRobo[indAtacante].vel = 0;
 
-		if (abs(estado[indGoleiro].x-objetivoRobo[indGoleiro].x) + abs(estado[indGoleiro].y-objetivoRobo[indGoleiro].y) < TAM_ROBO &&
-				abs(estado[indVolante].x-objetivoRobo[indVolante].x) + abs(estado[indVolante].y-objetivoRobo[indVolante].y) < TAM_ROBO &&
-				abs(estado[indAtacante].x-objetivoRobo[indAtacante].x) + abs(estado[indAtacante].y-objetivoRobo[indAtacante].y) < TAM_ROBO) {
+		if (abs(estado[indGoleiro].x - objetivoRobo[indGoleiro].x) + abs(estado[indGoleiro].y - objetivoRobo[indGoleiro].y) < TAM_ROBO
+				&& abs(estado[indVolante].x - objetivoRobo[indVolante].x) + abs(estado[indVolante].y - objetivoRobo[indVolante].y) < TAM_ROBO
+				&& abs(estado[indAtacante].x - objetivoRobo[indAtacante].x) + abs(estado[indAtacante].y - objetivoRobo[indAtacante].y) < TAM_ROBO) {
 			emInicio = false;
-			emJogo=false;
+			emJogo = false;
 		}
 	}
 
 }
 
 //------------  E S T R A T E G I A -------------
-void estrategia(unsigned char cmd1[NUM_ROBOS_TIME*2],unsigned char cmd2[NUM_ROBOS_TIME*2]) {
-	unsigned char cmd[NUM_ROBOS_TIME];
+void estrategia(void) {
+	unsigned char cmd[NUM_ROBOS_TIME * 2];
 	int i;
-//	calculaPrevisao();
-	// EstrGoleiro();
-	// estrVolante(indVolante);
-	// estrAtacante();
-
+	calculaPrevisao();
+	EstrGoleiro();
+	estrVolante(indVolante);
+	estrAtacante();
 
 	if (trocarVolanteAtacante) {
 		int tmp = indAtacante; //Robo vira atacante
@@ -943,15 +912,43 @@ void estrategia(unsigned char cmd1[NUM_ROBOS_TIME*2],unsigned char cmd2[NUM_ROBO
 		indVolante = tmp;
 		trocarVolanteAtacante = 0;
 	}
+
 	verificaPosiconamentos();
+
+	for (i = 0; i < 3; i++) {
+		int e, d, ea, da;
+		for (int j = TAM_CMD_ENV - 1; j > 0; j--) {
+			cmdEnviado[j][i] = cmdEnviado[j - 1][i];
+		}
+		calculaCmd(i, objetivoRobo[i].angulo, objetivoRobo[i].x, objetivoRobo[i].y, objetivoRobo[i].vel);
+		//    CalculaCmd(i, 45, 150, 90, 0);
+		ea = abs(e = cmdEnviado[0][i].esq);
+		if (e < 0)
+			ea |= 0x8;
+		da = abs(d = cmdEnviado[0][i].dir);
+		if (d < 0)
+			da |= 0x8;
+		cmd[i * 2] = ea;
+		cmd[i * 2 + 1] = da;
+	}
+//	cout << "!";
+//		enviaDados(0x11, 0x11, 0x11);
+	static int contQuadro = 0;
+
 	if (emJogo) {
-//		enviaDados(0x12, 0x19, 0x10);
-		// enviaDados(cmd1[0], cmd1[1], cmd1[2], cmd1[3], cmd1[4], cmd1[5],  cmd2[0], cmd2[1], cmd2[2], cmd2[3], cmd2[4], cmd2[5]);
-		enviaDados(0x11, 0x11, 0x11, 0x11, 0x11, 0x11,  0x11, 0x11, 0x11, 0x11, 0x11, 0x11);
-		//    fprintf(fp, "%3d, %3x, %3x, %3x\n", ContQuadro, cmd[0], cmd[1], cmd[2]);
+//		contQuadro++;
+//		if (contQuadro>100 && contQuadro< 130)
+	//enviaDados(1 << 4, 1 << 4, 1 << 4, 1 << 4, 1 << 4, 1 << 4);
+//		else
+//			enviaDados(0, 0, 0, 0, 0, 0);
+		enviaDados(cmd[0] << 4, cmd[1] << 4, cmd[2] << 4, cmd[3] << 4, cmd[4] << 4, cmd[5] << 4);
+		    //fprintf(fp, "%3d, %3x, %3x, %3x\n", ContQuadro, cmd[0], cmd[1], cmd[2]);
 	} else {
-		printf("%3x, %3x, %3x, %3x, %3x, %3x, %3x, %3x, %3x, %3x, %3x, %3x\n", cmd1[0], cmd1[1], cmd1[2], cmd1[3], cmd1[4], cmd1[5],  cmd2[0], cmd2[1], cmd2[2], cmd2[3], cmd2[4], cmd2[5]);
+		printf("ESTRATÉGIA: Goleiro: %x, Volante: %x, Atacante: %x\n", indGoleiro, indVolante, indAtacante);
+		printf("ESTRATÉGIA: cmd[0]: %x, cmd[1]: %x, cmd[2]: %x, cmd[3]: %x, cmd[4]: %x, cmd[5]: %x\n\n", cmd[0], cmd[1], cmd[2], cmd[3], cmd[4], cmd[5]);
+		printf("ESTRATÉGI CC: cmd[0]: %x, cmd[1]: %x, cmd[2]: %x, cmd[3]: %x, cmd[4]: %x, cmd[5]: %x\n\n", cmd[0] << 4, cmd[1] << 4, cmd[2] << 4, cmd[3] << 4, cmd[4] << 4, cmd[5] << 4);
+		printf("ESTRATÉGIa CC: 0: %x, 1: %x, 2: %x, 3: %x, 4: %x, 5: %x\n\n", '0' << 4, '1' << 4, '2' << 4, '3' << 4, '4' << 4, '5' << 4);
+		enviaDados(0, 0, 0, 0, 0, 0);
 	}
 }
-
 

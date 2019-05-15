@@ -142,7 +142,7 @@ public:
 	int maxDistEtiquetas;
 	int maxPixelsPorSegundo;
 
-//	Glib::RefPtr<Gdk::Pixbuf> imgOrig, imgCap, imgDigi; // MATEUS
+	// Glib::RefPtr<Gdk::Pixbuf> imgOrig, imgCap, imgDigi;
 	Cor *pImgCap;
 	guint8 pImgDigi[640 * 480]; //indice da cor;
 	guint8 pImgAux[640 * 480]; //salvamento temporario de pImgDigi

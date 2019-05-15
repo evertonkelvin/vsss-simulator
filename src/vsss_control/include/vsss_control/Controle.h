@@ -11,9 +11,7 @@
 #ifndef CONTROLE_H_
 #define CONTROLE_H_
 
-void enviaDados(unsigned char b1, unsigned char b2, unsigned char b3,
-		unsigned char b4, unsigned char b5, unsigned char b6, unsigned char b7, unsigned char b8, unsigned char b9,
-		unsigned char b10, unsigned char b11, unsigned char b12);
+void enviaDados(unsigned char b1, unsigned char b2, unsigned char b3, unsigned char b4, unsigned char b5, unsigned char b6);
 void calculaCmd(int Jogador, int AO, int XO, int YO, int Vel);
 
 #endif /* CONTROLE_H_ */

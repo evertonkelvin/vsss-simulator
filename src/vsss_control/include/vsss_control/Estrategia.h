@@ -11,5 +11,6 @@
 #ifndef ESTRATEGIA_H_
 #define ESTRATEGIA_H_
 
-void estrategia(unsigned char cmd1[6],unsigned char cmd2[6]);
+void estrategia(void);
+
 #endif /* ESTRATEGIA_H_ */
