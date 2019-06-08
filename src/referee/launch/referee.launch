@@ -1,0 +1,3 @@
+<launch>
+    <node name="referee_node" pkg="referee" type="referee_node" output="screen"/>
+</launch>
