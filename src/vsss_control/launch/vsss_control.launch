@@ -1,3 +1,0 @@
-<launch>
-    <node name="vsss_control_node" pkg="vsss_control" type="vsss_control_node"/>
-</launch>
