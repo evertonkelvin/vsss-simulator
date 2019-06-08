@@ -1,0 +1,3 @@
+<launch>
+    <node name="team2_control_node" pkg="team2_control" type="team2_control_node" output="screen"/>
+</launch>
