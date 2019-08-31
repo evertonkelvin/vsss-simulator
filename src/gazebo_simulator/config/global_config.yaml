@@ -1,0 +1,18 @@
+# Uses ISO units. For example, use 'm' for length.
+
+home:
+  prefix: "home"                 # Team name prefix. 
+  num: 3
+ 
+guest:
+  prefix: "guest"                # Rival name prefix. 
+  num: 3
+
+field:
+  length: 170                     # Use integer!   used in spawn_model_script
+  width: 130                      # Use integer!  used in spawn_model_script
+  
+ball:
+  name: "vsss_ball"                   # ball model name
+  chassis_link: "vsss_ball::chassis"  # ball body link name  
+
