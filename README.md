@@ -1,4 +1,4 @@
-# vsss-simulator
+# vsss_simulator
 ![Imagem](vsss_simulator.jpg "VSSS Simulator")
 
 Simulador desenvolvido com ROS e Gazebo para a equipe de robótica [Carrossel Caipira](https://carrosselcaipira.github.io/site), competidora de futebol de robôs na categoria IEEE Very Small Size Soccer ([VSSS](http://www.cbrobotica.org/?page_id=81)) da Latin American Robotics Competition (LARC).
@@ -8,7 +8,8 @@ Este simulador é um trabalho de conclusão de curso em Sistemas de Informação
 ## Instalar ROS
 http://wiki.ros.org/melodic/Installation/Ubuntu
 
-## Instalar [Gazebo](http://gazebosim.org/tutorials?tut=install_ubuntu)
+## Instalar Gazebo
+http://gazebosim.org/tutorials?tut=install_ubuntu
 ```
 $ sudo apt-get install gazebo9
 ```
@@ -18,11 +19,9 @@ $ sudo apt-get install gazebo9
 $ sudo apt-get install libgazebo9-dev
 ```
 
-## Criar pasta do simulador
+## Clonar repositório do simulador
 ```
-$ mkdir ~/vsss_simulator
-$ cd ~/vsss_simulator
-$ git clone https://github.com/evertonkelvin/vsss-simulator.git
+$ git clone https://github.com/evertonkelvin/vsss-simulator.git ~/vsss_simulator
 ```
 
 ## Compilar simulador
