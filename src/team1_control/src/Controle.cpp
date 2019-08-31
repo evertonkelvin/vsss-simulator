@@ -334,7 +334,7 @@ void inicializa_obst_meta_khatib(campoPotKhatib *campoPotencial, int xObjetivo,
 	//				if (auxAng >= 2*M_PI)
 	//					auxAng -= 2*M_PI;
 					campoPotencial->matAng[i][j] = auxAng;
-					printf("%f\n", campoPotencial->matAng[i][j]);
+					// printf("%f\n", campoPotencial->matAng[i][j]);
 
 				}
 			}
@@ -826,8 +826,8 @@ void calculaCmd(int indJogador, int angObjetivo, int xObjetivo, int yObjetivo,
 		cmdEnviado[0][indJogador].dir = pd * 1;
 
 		//COMANDO PARA O VOLANTE OU ATACANTE
-		printf("\nCmdEnviado Robo[%x]: ", indJogador);
-		printf("esq: %x, dir: %x \n", cmdEnviado[0][indJogador].esq, cmdEnviado[0][indJogador].dir);
+		// printf("\nCmdEnviado Robo[%x]: ", indJogador);
+		// printf("esq: %x, dir: %x \n", cmdEnviado[0][indJogador].esq, cmdEnviado[0][indJogador].dir);
 
 ////		auxAng = dAng;
 //		if ((dAng <= 90 && dAng > 0) || (dAng <= 360 && dAng >= 270)) {
@@ -964,8 +964,8 @@ void calculaCmd(int indJogador, int angObjetivo, int xObjetivo, int yObjetivo,
 		cmdEnviado[0][indJogador].dir = pd * 1;
 
 		//COMANDO PARA O GOLEIRO
-		printf("\nCmdEnviado Robo[%x]: ", indJogador);
-		printf("esq: %x, dir: %x \n", cmdEnviado[0][indJogador].esq, cmdEnviado[0][indJogador].dir);
+		// printf("\nCmdEnviado Robo[%x]: ", indJogador);
+		// printf("esq: %x, dir: %x \n", cmdEnviado[0][indJogador].esq, cmdEnviado[0][indJogador].dir);
 	}
 }
 

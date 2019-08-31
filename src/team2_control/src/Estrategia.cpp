@@ -938,16 +938,15 @@ void estrategia(void) {
 	if (emJogo) {
 //		contQuadro++;
 //		if (contQuadro>100 && contQuadro< 130)
-	//enviaDados(1 << 4, 1 << 4, 1 << 4, 1 << 4, 1 << 4, 1 << 4);
+		// enviaDados(4 << 4, 2 << 4, 0 << 4, 0 << 4, 0 << 4, 0 << 4);
+		// enviaDados(1 << 4, 2 << 4, 1 << 4, 2 << 4, 1 << 4, 2 << 4);
 //		else
 //			enviaDados(0, 0, 0, 0, 0, 0);
 		enviaDados(cmd[0] << 4, cmd[1] << 4, cmd[2] << 4, cmd[3] << 4, cmd[4] << 4, cmd[5] << 4);
-		    //fprintf(fp, "%3d, %3x, %3x, %3x\n", ContQuadro, cmd[0], cmd[1], cmd[2]);
+		    // fprintf(fp, "%3d, %3x, %3x, %3x\n", ContQuadro, cmd[0], cmd[1], cmd[2]);
 	} else {
-		printf("ESTRATÉGIA: Goleiro: %x, Volante: %x, Atacante: %x\n", indGoleiro, indVolante, indAtacante);
-		printf("ESTRATÉGIA: cmd[0]: %x, cmd[1]: %x, cmd[2]: %x, cmd[3]: %x, cmd[4]: %x, cmd[5]: %x\n\n", cmd[0], cmd[1], cmd[2], cmd[3], cmd[4], cmd[5]);
-		printf("ESTRATÉGI CC: cmd[0]: %x, cmd[1]: %x, cmd[2]: %x, cmd[3]: %x, cmd[4]: %x, cmd[5]: %x\n\n", cmd[0] << 4, cmd[1] << 4, cmd[2] << 4, cmd[3] << 4, cmd[4] << 4, cmd[5] << 4);
-		printf("ESTRATÉGIa CC: 0: %x, 1: %x, 2: %x, 3: %x, 4: %x, 5: %x\n\n", '0' << 4, '1' << 4, '2' << 4, '3' << 4, '4' << 4, '5' << 4);
+		// printf("ESTRATÉGIA: Goleiro: %x, Volante: %x, Atacante: %x\n", indGoleiro, indVolante, indAtacante);
+		// printf("ESTRATÉGIA: cmd[0]: %x, cmd[1]: %x, cmd[2]: %x, cmd[3]: %x, cmd[4]: %x, cmd[5]: %x\n\n", cmd[0], cmd[1], cmd[2], cmd[3], cmd[4], cmd[5]);
 		enviaDados(0, 0, 0, 0, 0, 0);
 	}
 }
