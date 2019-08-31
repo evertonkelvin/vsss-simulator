@@ -1,47 +1,67 @@
 # vsss-simulator
-![Imagem](vsss_simulator.png "VSSS Simulator")
+![Imagem](vsss_simulator.jpg "VSSS Simulator")
 
-Simulador para a categoria IEEE Very Small Size da LARC/CBR utilizando Gazebo + ROS.
+Simulador desenvolvido com ROS e Gazebo para a equipe de robótica [Carrossel Caipira](https://carrosselcaipira.github.io/site), competidora de futebol de robôs na categoria IEEE Very Small Size Soccer ([VSSS](http://www.cbrobotica.org/?page_id=81)) da Latin American Robotics Competition (LARC).
 
-Este projeto é um trabalho de conclusão de curso em Sistemas de Informação da UNESP/Bauru.
+Este simulador é um trabalho de conclusão de curso em Sistemas de Informação da UNESP/Bauru.
 
 ## Instalar ROS
 http://wiki.ros.org/melodic/Installation/Ubuntu
 
-## Instalar simulador [Gazebo](http://gazebosim.org/tutorials?tut=install_ubuntu)
+## Instalar [Gazebo](http://gazebosim.org/tutorials?tut=install_ubuntu)
 ```
-sudo apt-get install gazebo9
-```
-
-## Instalar dependências para desenvolvimento no Gazebo
-```
-sudo apt-get install libgazebo9-dev
+$ sudo apt-get install gazebo9
 ```
 
-## Criar pasta do projeto
+## Instalar dependências de desenvolvimento do Gazebo
 ```
-mkdir ~/catkin_ws
-cd ~/catkin_ws
-git clone https://github.com/evertonkelvin/vsss-simulator.git
+$ sudo apt-get install libgazebo9-dev
 ```
 
-## Compilar aplicação
+## Criar pasta do simulador
 ```
-cd ~/catkin_ws
-catkin_make
-```
-
-## Rodar aplicação
-
-### Rodar simulador gazebo
-```
-cd ~/catkin_ws
-roslaunch vsss_simulator game_ready.launch
+$ mkdir ~/vsss_simulator
+$ cd ~/vsss_simulator
+$ git clone https://github.com/evertonkelvin/vsss-simulator.git
 ```
 
-### Rodar software de controle
-* Abrir outro terminal e executar os comandos:
+## Compilar simulador
 ```
-cd ~/catkin_ws
-roslaunch vsss_control vsss_control.launch
+$ cd ~/vsss_simulator
+$ catkin_make
+```
+
+## Executar simulador
+
+### Executar simulador completo (todos os módulos)
+```
+$ cd ~/vsss_simulator
+$ source devel/setup.bash OR $ source devel/setup.zsh
+$ roslaunch vsss_simulator.launch
+```
+
+### Executar cada módulo separadamente
+* Executar módulo do Gazebo:
+```
+$ cd ~/vsss_simulator
+$ source devel/setup.bash OR $ source devel/setup.zsh
+$ roslaunch gazebo_simulator gazebo_simulator.launch
+```
+* Abrir outro terminal e executar módulo do Árbitro:
+```
+$ cd ~/vsss_simulator
+$ source devel/setup.bash OR $ source devel/setup.zsh
+$ roslaunch referee referee.launch
+```
+* Abrir outro terminal e executar módulo de Controle do Time 1:
+```
+$ cd ~/vsss_simulator
+$ source devel/setup.bash OR $ source devel/setup.zsh
+$ roslaunch team1_control team1_control.launch
+```
+* Abrir outro terminal e executar módulo de Controle do Time 2:
+```
+$ cd ~/vsss_simulator
+$ source devel/setup.bash OR $ source devel/setup.zsh
+$ roslaunch team2_control team2_control.launch
 ```
